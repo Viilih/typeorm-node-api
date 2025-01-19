@@ -1,0 +1,6 @@
+// We dont want to build our tests
+
+{
+  "extends": "./tsconfig.json",
+  "exclude": ["test"]
+}

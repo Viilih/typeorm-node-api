@@ -1,7 +1,6 @@
 import http from "http";
 import express from "express";
 import logger from "./config/logger";
-import { Request, Response, NextFunction } from "express";
 import { loggingHandler } from "./middleware/loggingHandler";
 import { corsHandler } from "./middleware/corsHandler";
 import { routeNotFound } from "./middleware/routeNotFound";
@@ -43,12 +42,17 @@ export const Main = () => {
     );
     logger.info("-----------------------");
   });
+  AppDataSource.initialize().then(async () => {
+    logger.info("database connected!");
+  });
 };
 
-export const Shutdown = (callback: any) =>
-  httpServer && httpServer.close(callback);
+export const Shutdown = () =>
+  httpServer &&
+  httpServer.close(() => {
+    AppDataSource.destroy();
+  });
 
-AppDataSource.initialize().then(async () => {
-  logger.info("database connected!");
+if (require.main === module) {
   Main();
-});
+}
