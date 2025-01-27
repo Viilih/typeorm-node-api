@@ -35,16 +35,14 @@ export const Main = () => {
   application.use(errorHandler);
 
   httpServer = http.createServer();
-  application.listen(SERVER.SERVER_PORT, () => {
-    logger.info("-----------------------");
-    logger.info(
-      `Server started: ${SERVER.SERVER_HOSTNAME} : ${SERVER.SERVER_PORT}`
-    );
-    logger.info("-----------------------");
+  application.listen(SERVER.PORT, SERVER.HOSTNAME, () => {
+    logger.info(`Server running at http://${SERVER.HOSTNAME}:${SERVER.PORT}`);
   });
-  AppDataSource.initialize().then(async () => {
-    logger.info("database connected!");
-  });
+  AppDataSource.initialize()
+    .then(async () => {
+      logger.info("database connected!");
+    })
+    .catch((error) => logger.error("Database connection failed!", error));
 };
 
 export const Shutdown = () =>
