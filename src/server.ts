@@ -1,3 +1,4 @@
+// server.ts
 import http from "http";
 import express from "express";
 import logger from "./config/logger";
@@ -10,9 +11,9 @@ import routers from "./routes/bookRoutes";
 import { errorHandler } from "./middleware/errorHandler";
 
 export const application = express();
-export let httpServer: ReturnType<typeof http.createServer>;
+export let httpServer: http.Server;
 
-export const Main = () => {
+export const Main = async () => {
   logger.info("-----------------------");
   logger.info("Initializing API");
   logger.info("-----------------------");
@@ -23,6 +24,7 @@ export const Main = () => {
   logger.info("-----------------------");
   logger.info("Logging and configuration");
   logger.info("-----------------------");
+
   application.use(loggingHandler);
   application.use(corsHandler);
 
@@ -30,27 +32,39 @@ export const Main = () => {
   logger.info("Controller routing");
   logger.info("-----------------------");
 
+  application.get("/main/healthcheck", (req, res) => {
+    res.status(200).json({ hello: "world!" });
+  });
+
   application.use(routers);
   application.use(routeNotFound);
   application.use(errorHandler);
 
-  httpServer = http.createServer();
-  application.listen(SERVER.PORT, SERVER.HOSTNAME, () => {
+  httpServer = http.createServer(application);
+
+  httpServer.listen(SERVER.PORT, SERVER.HOSTNAME, () => {
     logger.info(`Server running at http://${SERVER.HOSTNAME}:${SERVER.PORT}`);
   });
-  AppDataSource.initialize()
-    .then(async () => {
-      logger.info("database connected!");
-    })
-    .catch((error) => logger.error("Database connection failed!", error));
+
+  await AppDataSource.initialize();
+  logger.info("Database connected!");
 };
 
-export const Shutdown = () =>
-  httpServer &&
-  httpServer.close(() => {
-    AppDataSource.destroy();
-  });
+export const Shutdown = async () => {
+  if (httpServer) {
+    return new Promise<void>((resolve) => {
+      httpServer.close(async () => {
+        if (AppDataSource.isInitialized) {
+          await AppDataSource.destroy();
+        }
+        resolve();
+      });
+    });
+  }
+};
 
 if (require.main === module) {
-  Main();
+  Main().catch((error) => {
+    logger.error("Failed to start server:", error);
+  });
 }
